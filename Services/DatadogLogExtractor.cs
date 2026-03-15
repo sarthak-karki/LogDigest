@@ -84,12 +84,18 @@ public class DatadogLogExtractor
         var result = await response.Content.ReadFromJsonAsync<SearchResponse>(ct)
             ?? throw new InvalidOperationException("Empty response from Datadog");
 
-        var logs = result.Data?.Select(d => new DatadogLog
+        var logs = result.Data?.Select(d =>
         {
-            Service = d.Attributes?.Service ?? "unknown",
-            Message = d.Attributes?.Message ?? "",
-            Level = d.Attributes?.Status ?? "unknown",
-            Timestamp = d.Attributes?.Timestamp ?? DateTimeOffset.MinValue
+            var (error, attrs) = ExtractCustomAttributes(d.Attributes?.CustomAttributes);
+            return new DatadogLog
+            {
+                Service = d.Attributes?.Service ?? "unknown",
+                Message = d.Attributes?.Message ?? "",
+                Level = d.Attributes?.Status ?? "unknown",
+                Timestamp = d.Attributes?.Timestamp ?? DateTimeOffset.MinValue,
+                Error = error,
+                Attributes = attrs
+            };
         }).ToList() ?? [];
 
         return (logs, result.Meta?.Page?.After);
@@ -101,6 +107,7 @@ public class DatadogLogExtractor
             .GroupBy(l => new { l.Service, Key = NormaliseMessage(l.Message), l.Level })
             .Select(g =>
             {
+                var samples = g.Take(MaxSamplesPerGroup).ToList();
                 var group = new LogGroup
                 {
                     Service = g.Key.Service,
@@ -108,8 +115,19 @@ public class DatadogLogExtractor
                     Level = g.Key.Level,
                     Count = g.Count()
                 };
-                group.Samples.AddRange(
-                    g.Take(MaxSamplesPerGroup).Select(l => l.Message));
+                group.Samples.AddRange(samples.Select(l => l.Message));
+                group.Errors.AddRange(
+                    samples.Where(l => l.Error is not null).Select(l => l.Error!));
+
+                // Merge unique custom attributes from samples
+                foreach (var log in samples)
+                {
+                    foreach (var (key, value) in log.Attributes)
+                    {
+                        group.Attributes.TryAdd(key, value);
+                    }
+                }
+
                 return group;
             })
             .OrderByDescending(g => g.Count)
@@ -136,6 +154,46 @@ public class DatadogLogExtractor
             "<num>");
 
         return message.Trim();
+    }
+
+    private static (Models.ErrorInfo? Error, Dictionary<string, string> Attrs) ExtractCustomAttributes(JsonElement? custom)
+    {
+        Models.ErrorInfo? error = null;
+        var attrs = new Dictionary<string, string>();
+
+        if (custom is not { ValueKind: JsonValueKind.Object } element)
+            return (error, attrs);
+
+        // Extract error/exception fields
+        if (element.TryGetProperty("error", out var errorEl) && errorEl.ValueKind == JsonValueKind.Object)
+        {
+            error = new Models.ErrorInfo
+            {
+                Kind = errorEl.TryGetProperty("kind", out var k) ? k.GetString() : null,
+                Message = errorEl.TryGetProperty("message", out var m) ? m.GetString() : null,
+                Stack = errorEl.TryGetProperty("stack", out var s) ? TruncateStack(s.GetString()) : null
+            };
+        }
+
+        // Extract other top-level custom attributes (skip nested objects to keep it manageable)
+        foreach (var prop in element.EnumerateObject())
+        {
+            if (prop.Name == "error") continue;
+            if (prop.Value.ValueKind is JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+            {
+                attrs[prop.Name] = prop.Value.ToString();
+            }
+        }
+
+        return (error, attrs);
+    }
+
+    private static string? TruncateStack(string? stack)
+    {
+        if (string.IsNullOrEmpty(stack)) return null;
+        // Keep first 5 lines of the stack trace to stay concise
+        var lines = stack.Split('\n');
+        return lines.Length <= 5 ? stack : string.Join('\n', lines.Take(5)) + "\n  ...";
     }
 
     // --- Datadog API DTOs ---
@@ -177,6 +235,7 @@ public class DatadogLogExtractor
         [JsonPropertyName("message")] public string? Message { get; set; }
         [JsonPropertyName("status")] public string? Status { get; set; }
         [JsonPropertyName("timestamp")] public DateTimeOffset? Timestamp { get; set; }
+        [JsonPropertyName("attributes")] public JsonElement? CustomAttributes { get; set; }
     }
 
     private class SearchMeta
@@ -195,5 +254,7 @@ public class DatadogLogExtractor
         public string Message { get; init; } = "";
         public string Level { get; init; } = "";
         public DateTimeOffset Timestamp { get; init; }
+        public Models.ErrorInfo? Error { get; init; }
+        public Dictionary<string, string> Attributes { get; init; } = [];
     }
 }

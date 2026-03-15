@@ -67,6 +67,8 @@ public class AiSummariser
         sb.AppendLine("- Bullet points for each error group with count");
         sb.AppendLine("- A brief 1-2 sentence overall assessment at the top");
         sb.AppendLine("- Flag anything that looks like it needs immediate attention with :rotating_light:");
+        sb.AppendLine("- If exception details are present, mention the exception type and root cause");
+        sb.AppendLine("- Use custom attributes for additional context when relevant");
         sb.AppendLine();
         sb.AppendLine("Here are the grouped log entries:");
         sb.AppendLine();
@@ -77,6 +79,14 @@ public class AiSummariser
             foreach (var sample in group.Samples)
             {
                 sb.AppendLine($"  sample: {sample}");
+            }
+            foreach (var error in group.Errors)
+            {
+                sb.AppendLine($"  exception: {error}");
+            }
+            if (group.Attributes.Count > 0)
+            {
+                sb.AppendLine($"  attributes: {string.Join(", ", group.Attributes.Select(a => $"{a.Key}={a.Value}"))}");
             }
             sb.AppendLine();
         }
