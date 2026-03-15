@@ -22,36 +22,23 @@ var levelsOption = new Option<string[]>("--levels")
     AllowMultipleArgumentsPerToken = true
 };
 
-var servicesOption = new Option<string[]>("--services")
-{
-    Description = "Filter to specific services (default: all)",
-    DefaultValueFactory = _ => Array.Empty<string>(),
-    AllowMultipleArgumentsPerToken = true
-};
-
 var rootCommand = new RootCommand("LogDigest — Datadog log summary for Slack")
 {
     daysOption,
-    levelsOption,
-    servicesOption
+    levelsOption
 };
 
 rootCommand.SetAction(async (parseResult, cancellationToken) =>
 {
     var days = parseResult.GetValue(daysOption);
     var levels = parseResult.GetValue(levelsOption) ?? ["warn", "error"];
-    var services = parseResult.GetValue(servicesOption) ?? [];
-
-    // Use CLI --services if provided, otherwise fall back to config
-    var resolvedServices = services.Length > 0
-        ? ParseCommaSeparated(services)
-        : config.GetSection("Datadog:Services").Get<string[]>() ?? [];
+    var services = config.GetSection("Datadog:Services").Get<string[]>() ?? [];
 
     var options = new DigestOptions
     {
         Days = days,
         Levels = ParseCommaSeparated(levels),
-        Services = resolvedServices
+        Services = services
     };
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
