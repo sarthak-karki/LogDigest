@@ -10,8 +10,8 @@ var config = new ConfigurationBuilder()
 
 var options = new DigestOptions
 {
-    Days = config.GetValue("Digest:Days", 1),
-    Levels = config.GetSection("Digest:Levels").Get<string[]>() ?? ["warn", "error"],
+    Days = config.GetValue("Datadog:Days", 1),
+    Levels = config.GetSection("Datadog:Levels").Get<string[]>() ?? ["warn", "error"],
     Services = config.GetSection("Datadog:Services").Get<string[]>() ?? []
 };
 
