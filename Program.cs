@@ -42,11 +42,16 @@ rootCommand.SetAction(async (parseResult, cancellationToken) =>
     var levels = parseResult.GetValue(levelsOption) ?? ["warn", "error"];
     var services = parseResult.GetValue(servicesOption) ?? [];
 
+    // Use CLI --services if provided, otherwise fall back to config
+    var resolvedServices = services.Length > 0
+        ? ParseCommaSeparated(services)
+        : config.GetSection("Datadog:Services").Get<string[]>() ?? [];
+
     var options = new DigestOptions
     {
         Days = days,
         Levels = ParseCommaSeparated(levels),
-        Services = ParseCommaSeparated(services)
+        Services = resolvedServices
     };
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
