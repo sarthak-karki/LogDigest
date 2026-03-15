@@ -19,7 +19,7 @@ var servicesOption = new Option<string[]>("--services", () => [], "Filter to spe
     AllowMultipleArgumentsPerToken = true
 };
 
-var rootCommand = new RootCommand("LogDigest — Datadog log summary for Slack")
+var rootCommand = new RootCommand("LogDigest — Extract Datadog logs to a file for analysis")
 {
     daysOption,
     levelsOption,
@@ -51,13 +51,10 @@ rootCommand.SetHandler(async (int days, string[] levels, string[] services) =>
     }
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"Found {groups.Sum(g => g.Count)} logs in {groups.Count} groups. Summarising with Claude...");
+    Console.WriteLine($"Found {groups.Sum(g => g.Count)} logs in {groups.Count} groups.");
     Console.ResetColor();
 
-    var summariser = new AiSummariser(config);
-    var result = await summariser.SummariseAsync(groups, options);
-
-    await OutputWriter.WriteAsync(result, options);
+    await OutputWriter.WriteAsync(groups, options);
 
 }, daysOption, levelsOption, servicesOption);
 
