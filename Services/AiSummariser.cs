@@ -59,16 +59,24 @@ public class AiSummariser
     private static string BuildPrompt(List<LogGroup> groups, DigestOptions options)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("You are a concise DevOps engineer writing a Slack digest of log errors/warnings.");
-        sb.AppendLine($"Time window: last {options.Days} day(s) | Levels: {options.LevelsDisplay} | Services: {options.ServicesDisplay}");
+        sb.AppendLine($"I've uploaded Datadog error and warning logs from the last {options.Days} day(s).");
+        sb.AppendLine($"Services: {options.ServicesDisplay} | Levels: {options.LevelsDisplay}");
         sb.AppendLine();
-        sb.AppendLine("Format the output as a Slack message using mrkdwn:");
-        sb.AppendLine("- Bold section headers per service");
-        sb.AppendLine("- Bullet points for each error group with count");
-        sb.AppendLine("- A brief 1-2 sentence overall assessment at the top");
-        sb.AppendLine("- Flag anything that looks like it needs immediate attention with :rotating_light:");
-        sb.AppendLine("- If exception details are present, mention the exception type and root cause");
-        sb.AppendLine("- Use custom attributes for additional context when relevant");
+        sb.AppendLine("Please analyse these logs and produce a Slack-ready summary in Slack mrkdwn format. Structure it as:");
+        sb.AppendLine("1. *Overview* — 2-3 sentence health summary. Mention total log count, number of services affected, and overall severity (healthy / concerning / critical).");
+        sb.AppendLine("2. *Critical issues* — Errors needing immediate attention. For each: service name, error description, occurrence count, and a brief likely root cause based on the log messages.");
+        sb.AppendLine("3. *Warnings to watch* — Warnings that could escalate. Same format, lower priority.");
+        sb.AppendLine("4. *Recurring patterns* — Errors appearing across multiple services or pointing to systemic issues (shared dependencies, timeout patterns, etc).");
+        sb.AppendLine("5. *Recommended actions* — Concrete next steps, prioritised by impact.");
+        sb.AppendLine();
+        sb.AppendLine("Formatting rules:");
+        sb.AppendLine("- Use Slack mrkdwn: *bold*, _italic_, `code`");
+        sb.AppendLine("- Use :rotating_light: for critical, :warning: for warnings, :white_check_mark: for healthy");
+        sb.AppendLine("- Group by service");
+        sb.AppendLine("- Include counts, e.g. \"TimeoutException (342 occurrences)\"");
+        sb.AppendLine("- If no critical issues, say so — good news is worth reporting");
+        sb.AppendLine("- Keep it scannable — this will be skimmed in 30 seconds");
+        sb.AppendLine("- Output ONLY the Slack message, no extra commentary");
         sb.AppendLine();
         sb.AppendLine("Here are the grouped log entries:");
         sb.AppendLine();
