@@ -9,13 +9,23 @@ var config = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .Build();
 
-var daysOption = new Option<int>("--days", () => 1, "Number of days to look back");
-var levelsOption = new Option<string[]>("--levels", () => ["warn", "error"], "Log severity levels to include")
+var daysOption = new Option<int>("--days")
 {
+    Description = "Number of days to look back",
+    DefaultValueFactory = _ => 1
+};
+
+var levelsOption = new Option<string[]>("--levels")
+{
+    Description = "Log severity levels to include",
+    DefaultValueFactory = _ => new[] { "warn", "error" },
     AllowMultipleArgumentsPerToken = true
 };
-var servicesOption = new Option<string[]>("--services", () => [], "Filter to specific services (default: all)")
+
+var servicesOption = new Option<string[]>("--services")
 {
+    Description = "Filter to specific services (default: all)",
+    DefaultValueFactory = _ => Array.Empty<string>(),
     AllowMultipleArgumentsPerToken = true
 };
 
@@ -26,8 +36,12 @@ var rootCommand = new RootCommand("LogDigest — Datadog log summary for Slack")
     servicesOption
 };
 
-rootCommand.SetHandler(async (int days, string[] levels, string[] services) =>
+rootCommand.SetAction(async (parseResult, cancellationToken) =>
 {
+    var days = parseResult.GetValue(daysOption);
+    var levels = parseResult.GetValue(levelsOption) ?? ["warn", "error"];
+    var services = parseResult.GetValue(servicesOption) ?? [];
+
     var options = new DigestOptions
     {
         Days = days,
@@ -58,10 +72,9 @@ rootCommand.SetHandler(async (int days, string[] levels, string[] services) =>
     var result = await summariser.SummariseAsync(groups, options);
 
     await OutputWriter.WriteAsync(result, options);
+});
 
-}, daysOption, levelsOption, servicesOption);
-
-return await rootCommand.InvokeAsync(args);
+return await rootCommand.Parse(args).InvokeAsync();
 
 // Handles both "--levels warn error" and "--levels warn,error" styles
 static string[] ParseCommaSeparated(string[] values)
