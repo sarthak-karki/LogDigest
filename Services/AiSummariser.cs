@@ -66,7 +66,7 @@ public class AiSummariser
         sb.AppendLine("2. *Critical issues* — Errors needing immediate attention. For each: service name, error description, occurrence count, and a brief likely root cause based on the log messages.");
         sb.AppendLine("3. *Warnings to watch* — Warnings that could escalate. Same format, lower priority.");
         sb.AppendLine("4. *Recurring patterns* — Errors appearing across multiple services or pointing to systemic issues (shared dependencies, timeout patterns, etc).");
-        sb.AppendLine("5. *Recommended actions* — Concrete next steps, prioritised by impact.");
+        sb.AppendLine("5. *Recommended actions* — Concrete next steps, prioritised by impact. For each recommendation, include the relevant service name(s) and details (e.g. affected endpoints, error types, or resource identifiers) so that the responsible team can act without needing to look up additional context.");
         sb.AppendLine();
         sb.AppendLine("Formatting rules:");
         sb.AppendLine("- Use Slack mrkdwn: *bold*, _italic_, `code`");
