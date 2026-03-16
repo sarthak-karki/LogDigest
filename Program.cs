@@ -12,7 +12,8 @@ var options = new DigestOptions
 {
     Days = config.GetValue("Datadog:Days", 1),
     Levels = config.GetSection("Datadog:Levels").Get<string[]>() ?? ["warn", "error"],
-    Services = config.GetSection("Datadog:Services").Get<string[]>() ?? []
+    Services = config.GetSection("Datadog:Services").Get<string[]>() ?? [],
+    PromptOnly = config.GetValue("Digest:PromptOnly", false)
 };
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -30,11 +31,25 @@ if (groups.Count == 0)
     return;
 }
 
-Console.ForegroundColor = ConsoleColor.DarkGray;
-Console.WriteLine($"Found {groups.Sum(g => g.Count)} logs in {groups.Count} groups. Summarising with Claude...");
-Console.ResetColor();
+var totalLogs = groups.Sum(g => g.Count);
 
-var summariser = new AiSummariser(config);
-var result = await summariser.SummariseAsync(groups, options);
+if (options.PromptOnly)
+{
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine($"Found {totalLogs} logs in {groups.Count} groups. Exporting prompt...");
+    Console.ResetColor();
 
-await OutputWriter.WriteAsync(result, options);
+    var prompt = AiSummariser.BuildPrompt(groups, options);
+    await OutputWriter.WritePromptAsync(prompt, options, totalLogs, groups.Count);
+}
+else
+{
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine($"Found {totalLogs} logs in {groups.Count} groups. Summarising with Claude...");
+    Console.ResetColor();
+
+    var summariser = new AiSummariser(config);
+    var result = await summariser.SummariseAsync(groups, options);
+
+    await OutputWriter.WriteAsync(result, options);
+}
