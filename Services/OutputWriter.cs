@@ -7,6 +7,36 @@ public static class OutputWriter
 {
     private const string DigestsDir = "digests";
 
+    public static async Task WritePromptAsync(string prompt, DigestOptions options, int totalLogs, int uniqueGroups)
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("═══════════════════════════════════════════════");
+        Console.WriteLine("  LogDigest — Exported Prompt");
+        Console.WriteLine("═══════════════════════════════════════════════");
+        Console.ResetColor();
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"  Window: last {options.Days} day(s) | Levels: {options.LevelsDisplay} | Services: {options.ServicesDisplay}");
+        Console.WriteLine($"  Total logs: {totalLogs} | Unique groups: {uniqueGroups}");
+        Console.ResetColor();
+
+        Console.WriteLine();
+        Console.WriteLine(prompt);
+        Console.WriteLine();
+
+        await CopyToClipboardAsync(prompt);
+
+        Directory.CreateDirectory(DigestsDir);
+        var timestamp = DateTimeOffset.UtcNow;
+        var filename = $"prompt-{timestamp:yyyyMMdd-HHmmss}.md";
+        var path = Path.Combine(DigestsDir, filename);
+        await File.WriteAllTextAsync(path, prompt);
+
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"Saved to {path}");
+        Console.ResetColor();
+    }
+
     public static async Task WriteAsync(DigestResult result, DigestOptions options)
     {
         PrintToConsole(result, options);

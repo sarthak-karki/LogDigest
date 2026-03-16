@@ -55,7 +55,7 @@ public class AiSummariser
         };
     }
 
-    private static string BuildPrompt(List<LogGroup> groups, DigestOptions options)
+    public static string BuildPrompt(List<LogGroup> groups, DigestOptions options)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"I've uploaded Datadog error and warning logs from the last {options.Days} day(s).");
