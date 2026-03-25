@@ -17,7 +17,7 @@ public class AiSummariser
     {
         var apiKey = config["Claude:ApiKey"] ?? throw new InvalidOperationException("Claude:ApiKey is required");
 
-        _http = new HttpClient { BaseAddress = new Uri("https://api.anthropic.com") };
+        _http = new HttpClient(new LoggingHttpHandler("Claude")) { BaseAddress = new Uri("https://api.anthropic.com") };
         _http.DefaultRequestHeaders.Add("x-api-key", apiKey);
         _http.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

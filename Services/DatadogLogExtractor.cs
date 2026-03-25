@@ -22,7 +22,7 @@ public class DatadogLogExtractor
         var appKey = config["Datadog:AppKey"] ?? throw new InvalidOperationException("Datadog:AppKey is required");
         _site = config["Datadog:Site"] ?? "datadoghq.com";
 
-        _http = new HttpClient { BaseAddress = new Uri($"https://api.{_site}") };
+        _http = new HttpClient(new LoggingHttpHandler("Datadog")) { BaseAddress = new Uri($"https://api.{_site}") };
         _http.DefaultRequestHeaders.Add("DD-API-KEY", apiKey);
         _http.DefaultRequestHeaders.Add("DD-APPLICATION-KEY", appKey);
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
